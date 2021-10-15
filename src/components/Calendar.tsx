@@ -80,7 +80,7 @@ const Calendar: FC<{
     <Card sx={{ minWidth: "100%" }}>
       <CardHeader subheader={pickedPeriod}></CardHeader>
       <CardContent>
-        <TableContainer component={Paper} sx={{ height: 1 }}>
+        <TableContainer component={Paper} sx={{ height: '915px' }}>
           <Table stickyHeader>
             <TableHeader days={days} />
             <TableGames days={days} games={games} teams={TEAMS} />
