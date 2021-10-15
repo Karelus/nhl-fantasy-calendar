@@ -1,21 +1,25 @@
 import { FC, useState } from "react";
 
-import { Grid, TextField, Button, Typography, Box } from "@mui/material";
+import { Grid, TextField, Button } from "@mui/material";
 
 import { DesktopDatePicker, LocalizationProvider } from "@mui/lab";
 import AdapterDateFns from "@mui/lab/AdapterDateFns";
+
 import { format } from "date-fns";
 
-import TeamButtons from "./TeamButtons";
 import Calendar from "./Calendar";
-
-import { Team, Period } from "./types";
-import { TEAMS, PERIODS } from "../utils/constants";
+import { PERIODS } from "../utils/constants";
 
 const Dashboard: FC = () => {
-  const [pickedTeam, setPickedTeam] = useState<Team>(TEAMS[0]);
-  const [startDate, setStartDate] = useState<Date | null>(new Date());
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [pickedPeriod, setPickedPeriod] = useState<string>(PERIODS[0].name);
+  const [startDate, setStartDate] = useState<Date | null>(PERIODS[0].startDate);
+  const [endDate, setEndDate] = useState<Date | null>(PERIODS[0].endDate);
+
+  const handlePeriodClick = (period: string, start: Date, end: Date) => {
+    setPickedPeriod(period);
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   return (
     <Grid container sx={{ paddingTop: "20px" }}>
@@ -46,13 +50,10 @@ const Dashboard: FC = () => {
             />
           </Grid>
         </LocalizationProvider>
-        <Grid item sx={{ minWidth: "200px" }}>
-          <TeamButtons pickedTeam={pickedTeam} setPickedTeam={setPickedTeam} />
-        </Grid>
       </Grid>
       <Grid container item lg={6} spacing={1} justifyContent="flex-end">
         {PERIODS.map((period) => (
-          <Grid item>
+          <Grid item key={period.name}>
             <Button
               variant="contained"
               color="success"
@@ -60,6 +61,9 @@ const Dashboard: FC = () => {
                 period.endDate,
                 "dd.MM.yyyy"
               )}`}
+              onClick={() =>
+                handlePeriodClick(period.name, period.startDate, period.endDate)
+              }
             >
               {period.name}
             </Button>
@@ -67,11 +71,7 @@ const Dashboard: FC = () => {
         ))}
       </Grid>
       <Grid container item xs={12}>
-        <Calendar
-          selectedTeam={pickedTeam.id}
-          start={startDate}
-          end={endDate}
-        />
+        <Calendar start={startDate} end={endDate} pickedPeriod={pickedPeriod} />
       </Grid>
     </Grid>
   );

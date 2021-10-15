@@ -12,18 +12,26 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Grid,
 } from "@mui/material";
-import { format, getDate } from "date-fns";
 
+import {
+  format,
+  getDayOfYear,
+  getDay,
+  getWeek,
+  addDays,
+  isToday,
+} from "date-fns";
 import { Day, Game, Team } from "./types";
 import { getDays } from "../utils/getDays";
 import { TEAMS } from "../utils/constants";
 
 const Calendar: FC<{
-  selectedTeam: number;
   start: Date | null;
   end: Date | null;
-}> = ({ selectedTeam, start, end }) => {
+  pickedPeriod: string;
+}> = ({ start, end, pickedPeriod }) => {
   const [games, setGames] = useState<Game[]>([]);
   const [days, setDays] = useState<Date[]>([]);
 
@@ -33,46 +41,46 @@ const Calendar: FC<{
     }
   }, [start, end]);
 
-  const offSet = new Date().getTimezoneOffset();
-
   useEffect(() => {
-    let mounted: boolean = true;
-    getSchedule(
-      selectedTeam,
-      format(start || new Date(), "yyyy-MM-dd"),
-      format(end || new Date(), "yyyy-MM-dd")
-    ).then((items) => {
-      if (mounted) {
-        let fetchedGames: Game[] = [];
-        items.dates.forEach((date: Day) => {
-          date.games.forEach((game: Game) => {
-            fetchedGames.push(game);
+    if (start !== null && end !== null) {
+      let mounted: boolean = true;
+      getSchedule(
+        format(start || new Date(), "yyyy-MM-dd"),
+        format(end || new Date(), "yyyy-MM-dd")
+      ).then((items) => {
+        if (mounted) {
+          let fetchedGames: Game[] = [];
+          items.dates.forEach((date: Day) => {
+            date.games.forEach((game: Game) => {
+              fetchedGames.push(game);
+            });
           });
-        });
-        setGames(fetchedGames);
-      }
-      return () => (mounted = false);
-    });
-  }, [selectedTeam, start, end]);
+          setGames(fetchedGames);
+        }
+        return () => (mounted = false);
+      });
+    }
+  }, [start, end]);
 
-  const getSchedule = (teamId: number, start: string, end: string) => {
+  const getSchedule = (start: string, end: string) => {
     return fetch(
-      `https://statsapi.web.nhl.com/api/v1/schedule?teamId=${teamId}&startDate=${start}&endDate=${end}`
+      `https://statsapi.web.nhl.com/api/v1/schedule?startDate=${start}&endDate=${end}`
     ).then((data) => data.json());
   };
 
   if (games.length < 1) {
-    return <Typography>No games on selected date</Typography>;
+    return (
+      <Grid container justifyContent="center" sx={{ marginTop: "200px" }}>
+        <Typography>No games on selected date period</Typography>
+      </Grid>
+    );
   }
-
-  const jaksoStart = format(new Date(), "dd.MM.yyyy");
-  const jaksoEnd = format(new Date(), "dd.MM.yyyy");
 
   return (
     <Card sx={{ minWidth: "100%" }}>
-      <CardHeader title={`Jakso 1:  ${jaksoStart} - ${jaksoEnd}`}></CardHeader>
+      <CardHeader subheader={pickedPeriod}></CardHeader>
       <CardContent>
-        <TableContainer component={Paper} sx={{ maxHeight: "800px" }}>
+        <TableContainer component={Paper} sx={{ height: 1 }}>
           <Table stickyHeader>
             <TableHeader days={days} />
             <TableGames days={days} games={games} teams={TEAMS} />
@@ -87,9 +95,26 @@ const TableHeader: FC<{ days: Date[] }> = ({ days }) => {
   return (
     <TableHead>
       <TableRow>
-        <TableCell sx={{ position: "sticky", left: 0 }}>Joukkue</TableCell>
+        <TableCell
+          sx={{
+            position: "sticky",
+            left: 0,
+            minWidth: "100px",
+            borderRight: "1px solid black",
+          }}
+        >
+          Joukkue
+        </TableCell>
         {days.map((day) => (
-          <TableCell>{format(day, "dd.MM")}</TableCell>
+          <TableCell
+            key={day.toISOString()}
+            sx={{
+              borderRight: getDay(day) === 0 ? "2px solid black" : "",
+              border: isToday(day) ? "2px solid blue" : null,
+            }}
+          >
+            {format(day, "dd.MM")}
+          </TableCell>
         ))}
       </TableRow>
     </TableHead>
@@ -104,27 +129,84 @@ const TableGames: FC<{ days: Date[]; games: Game[]; teams: Team[] }> = ({
   return (
     <TableBody>
       {teams.map((team) => (
-        <TableRow>
-          <TableCell
-            sx={{
-              position: "sticky",
-              left: 0,
-              background: team.primary,
-              color: team.secondary,
-            }}
-          >
-            {team.teamName}
-          </TableCell>
-          {days.map((day) => (
-            <TableCell
-              style={{ borderLeft: "1px solid rgba(224, 224, 224, 1)" }}
-            >
-              Peli
-            </TableCell>
-          ))}
-        </TableRow>
+        <TeamRow
+          key={team.id}
+          days={days}
+          games={
+            games.filter(
+              (game) =>
+                game.teams.home.team.id === team.id ||
+                game.teams.away.team.id === team.id
+            ) || []
+          }
+          team={team}
+        />
       ))}
     </TableBody>
+  );
+};
+
+const TeamRow: FC<{ days: Date[]; games: Game[] | []; team: Team }> = ({
+  days,
+  games,
+  team,
+}) => {
+  return (
+    <TableRow>
+      <TableCell
+        size="small"
+        sx={{
+          minWidth: "100px",
+          backgroundColor: team.primary,
+          color: team.secondary,
+          position: "sticky",
+          left: 0,
+          borderRight: "1px solid #FFFFFF",
+        }}
+      >
+        {team.teamName}
+      </TableCell>
+      {days.map((day) => (
+        <RenderGameCell
+          key={day.toString()}
+          team={team}
+          day={day}
+          games={games}
+        />
+      ))}
+    </TableRow>
+  );
+};
+
+const RenderGameCell: FC<{
+  team: Team;
+  day: Date;
+  games: Game[];
+  gamesPerWeek?: number[];
+}> = ({ team, day, games, gamesPerWeek }) => {
+  let isGameDay = false;
+
+  if (games.length >= 1) {
+    isGameDay = games.some(
+      (game) =>
+        getDayOfYear(new Date(game.gameDate)) === getDayOfYear(addDays(day, 1))
+    );
+  }
+
+  const isSunday = getDay(day) === 0;
+
+  return (
+    <TableCell
+      size="small"
+      sx={{
+        borderRight: isSunday
+          ? "2px solid black"
+          : "1px solid rgba(224, 224, 224, 1)",
+        backgroundColor: isGameDay ? team.primary : "",
+      }}
+    >
+      {gamesPerWeek ? gamesPerWeek[getWeek(day)] : null}
+    </TableCell>
   );
 };
 
