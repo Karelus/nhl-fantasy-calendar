@@ -87,7 +87,7 @@ export const TEAMS: Team[] = [
     id: 3,
     name: "New York Rangers",
     primary: "#0038A8",
-    secondary: "#CE1126",
+    secondary: "#FFFFFF",
     text: "#FFFFFF",
     venue: {
       id: 5054,
@@ -564,7 +564,7 @@ export const TEAMS: Team[] = [
     id: 29,
     name: "Columbus Blue Jackets",
     primary: "#002654",
-    secondary: "#FFFFF",
+    secondary: "#FFFFFF",
     text: "#FFFFFF",
     venue: {
       id: 5059,
