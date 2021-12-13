@@ -11,7 +11,7 @@ In the project directory, you can run:
 ### `npm install`
 
 Run this in the project root folder after cloning the repository.
-It install's all needed dependencies and updates existing ones.
+It installs all needed dependencies and updates existing ones.
 
 ### `npm start`
 
